@@ -58,7 +58,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET") {
     echo "نتيجة البحث: " . htmlspecialchars($search);
 }
 ?>
-<!-- 
+<!-- الفروق بين الGITوبينPOST
 1. طريقة الإرسال:
 
    • $_POST: تُستخدم لإرسال البيانات عبر طريقة POST، حيث لا تظهر البيانات في عنوان URL.
