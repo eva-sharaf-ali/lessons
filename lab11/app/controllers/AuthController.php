@@ -2,8 +2,6 @@
 namespace App\Controllers;
 
 use App\Models\User;
-// use Core\Controller;
-
 use App\Session;
 
 class AuthController {

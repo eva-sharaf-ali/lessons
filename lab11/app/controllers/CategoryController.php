@@ -1,8 +1,7 @@
 <?php
 namespace App\Controllers;
 
-use App\Models\Category;
-use App\Models\Product; // استدعاء موديل المنتج
+use App\Models\Category; // تغيير إلى Category
 use Core\Controller;
 
 class CategoryController extends Controller {
@@ -10,82 +9,87 @@ class CategoryController extends Controller {
     private $basePath;
 
     public function __construct() {
+        // Dynamically get the base path
         $this->basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
     }
 
-    // عرض جميع الأقسام
+    // Read all categories
     public function index() {
         $categoryModel = new Category();
         $categories = $categoryModel->getAll();
         $this->view('categories/index', ['categories' => $categories]);
     }
 
-    // إنشاء قسم جديد
+    // Create a category (Form)
     public function create() {
-        $errors = [];
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $name = trim($_POST['name']);
-            $categoryModel = new Category();
-            $productModel = new Product(); // استدعاء موديل المنتج للتحقق
+            $data = [
+                'name' => $_POST['name']
+            ];
 
-            // تحقق مما إذا كان القسم موجودًا بالفعل
-            if ($categoryModel->getByName($name)) {
-                $errors['name'] = 'هذا القسم موجود بالفعل.';
-            }
-
-            // تحقق مما إذا كان هناك منتج بنفس الاسم
-            if ($productModel->getByName($name)) {
-                $errors['name'] = 'لا يمكن إضافة هذا القسم لأنه يوجد منتج بنفس الاسم.';
-            }
-
+            // Validate data
+            $errors = $this->validateCategoryData($data);
             if (empty($errors)) {
-                $data = ['name' => $name];
-
-                if ($categoryModel->create($data)) {
-                    header('Location: ' . $this->basePath . '/categories');
-                    exit;
-                }
-            }
-        }
-
-        $this->view('categories/create', ['errors' => $errors]);
-    }
-
-    // تعديل القسم
-    public function edit($id) {
-        $categoryModel = new Category();
-        $productModel = new Product();
-        $category = $categoryModel->getById($id);
-        $errors = [];
-
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $name = trim($_POST['name']);
-
-            // تحقق مما إذا كان الاسم الجديد موجودًا بالفعل لقسم آخر
-            $existingCategory = $categoryModel->getByName($name);
-            if ($existingCategory && $existingCategory['id'] != $id) {
-                $errors['name'] = 'هذا القسم موجود بالفعل.';
-            }
-
-            // تحقق مما إذا كان هناك منتج بنفس الاسم
-            if ($productModel->getByName($name)) {
-                $errors['name'] = 'لا يمكن تعديل هذا القسم لأن هناك منتجًا بنفس الاسم.';
-            }
-
-            if (empty($errors)) {
-                $data = ['name' => $name];
 
                 if ($categoryModel->update($data, $id)) {
                     header('Location: ' . $this->basePath . '/categories');
                     exit;
                 }
             }
-        }
 
-        $this->view('categories/edit', ['category' => $category, 'errors' => $errors]);
+            // Handle errors (you can pass them to the view)
+            $this->view('categories/create', ['errors' => $errors, 'data' => $data]);
+        }
+        
+        $this->view('categories/create');
     }
 
-    // حذف القسم
+    // Edit a category (Form)
+    public function edit($id) {
+        $categoryModel = new Category();
+        $category = $categoryModel->getById($id);
+
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $data = [
+                'name' => $_POST['name']
+            ];
+
+            // Validate data
+            $errors = $this->validateCategoryData($data, $id);
+            if (empty($errors)) {
+
+                if ($categoryModel->update($data, $id)) {
+                    header('Location: ' . $this->basePath . '/categories');
+                    exit;
+                }
+            }
+
+            // Handle errors (you can pass them to the view)
+            $this->view('categories/edit', ['category' => $category, 'errors' => $errors, 'data' => $data]);
+        }
+           
+
+        $this->view('categories/edit', ['category' => $category]);
+    }
+
+    private function validateCategoryData($data, $categoryId = null) {
+        $errors = [];
+    
+        // Validate category name
+        if (empty($data['name'])) {
+            $errors['name'] = 'اسم القسم مطلوب.';
+        } else {
+            $categoryModel = new Category();
+            if ($categoryModel->categoryExists($data['name'], $categoryId)) {
+                $errors['name'] = 'اسم القسم موجود بالفعل.';
+            }
+        }
+    
+        return $errors;
+    }
+    
+
+    // Delete a category
     public function delete($id) {
         $categoryModel = new Category();
         if ($categoryModel->delete($id)) {

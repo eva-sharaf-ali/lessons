@@ -27,10 +27,7 @@
             <label for="email" class="form-label">Email</label>
             <input type="email" name="email" id="email" class="form-control" value="<?= htmlspecialchars($user['email']); ?>" required>
         </div>
-        <!-- <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
-            <input type="password" name="password" id="password" class="form-control" placeholder="Leave blank to keep current password">
-        </div> -->
+        
         <div class="mb-3">
             <label for="birth_date" class="form-label">Birth Date</label>
             <input type="date" name="birth_date" id="birth_date" class="form-control" value="<?= htmlspecialchars($user['birth_date']); ?>">

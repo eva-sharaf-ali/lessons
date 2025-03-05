@@ -18,15 +18,6 @@ class Category {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getByName($name) {
-        $sql = "SELECT * FROM categories WHERE name = :name LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':name', $name, PDO::PARAM_STR);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC); // يعيد بيانات القسم إذا وجد، أو NULL إذا لم يوجد
-    }
-    
-
     public function create($data) {
         $stmt = $this->conn->prepare("INSERT INTO {$this->table} (name) VALUES (:name)");
         return $stmt->execute($data);
@@ -48,4 +39,21 @@ class Category {
         $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE id = :id");
         return $stmt->execute(['id' => $id]);
     }
+
+    public function categoryExists($name, $categoryId = null) {
+        $query = "SELECT COUNT(*) FROM {$this->table} WHERE name = :name";
+        if ($categoryId) {
+            $query .= " AND id != :categoryId"; // استبعاد القسم الحالي إذا كان موجودًا
+        }
+    
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':name', $name);
+        if ($categoryId) {
+            $stmt->bindParam(':categoryId', $categoryId);
+        }
+        $stmt->execute();
+    
+        return $stmt->fetchColumn() > 0; // إذا كان العدد أكبر من 0، فهذا يعني أن القسم موجود
+    }
+    
 }
