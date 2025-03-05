@@ -26,9 +26,10 @@
 </head>
 <body>
    <div class="login">
-      <form action="../../../app/controllers/AuthController.php" method="POST" class="login__form">
-         <h1 class="login__title">Sign Up</h1>
+   <form action="<?php echo PATH . "/auth/register"; ?>" method="POST"  class="login__form" enctype="multipart/form-data">
 
+      <!-- <form action="../../../app/controllers/AuthController.php" method="POST" class="login__form"> -->
+         <h1 class="login__title">Sign Up</h1>
          <div class="login__content">
             <div class="login__box">
                <i class="ri-user-line login__icon"></i>

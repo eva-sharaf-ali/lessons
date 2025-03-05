@@ -58,6 +58,7 @@ class UserController extends Controller {
     public function edit($id) {
         $userModel = new User();
         $user = $userModel->getById($id);
+        $errors = [];
 
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $data = [
@@ -70,8 +71,14 @@ class UserController extends Controller {
             ];
 
             // Validate data
-            $errors = $this->validateUpdateUserData($data, $id);
+            $errors = $this->validateUserData($data, $id);
             if (empty($errors)) {
+                // Hash the password only if provided
+                if (!empty($_POST['password'])) {
+                    $data['password'] = password_hash($_POST['password'], PASSWORD_BCRYPT);
+                } else {
+                    unset($data['password']); // Don't update password if it's empty
+                }
 
                 if ($userModel->update($data, $id)) {
                     header('Location: ' . $this->basePath . '/users');
@@ -83,6 +90,7 @@ class UserController extends Controller {
             $this->view('users/edit', ['user' => $user, 'errors' => $errors, 'data' => $data]);
         }
 
+        // Render edit page
         $this->view('users/edit', ['user' => $user]);
     }
 
@@ -100,41 +108,9 @@ class UserController extends Controller {
             }
         }
 
-        // Validate password
-        if (empty($data['password']) || strlen($data['password']) < 6) {
+        // Validate password (only if provided)
+        if (!empty($data['password']) && strlen($data['password']) < 6) {
             $errors['password'] = 'يجب أن تكون كلمة المرور مكونة من 6 أحرف على الأقل.';
-        }
-
-        // Validate birth date
-        if (empty($data['birth_date']) || !$this->isValidBirthDate($data['birth_date'])) {
-            $errors['birth_date'] = 'يجب أن يكون تاريخ الميلاد صحيحًا ويجب أن يكون عمر المستخدم 18 سنة على الأقل.';
-        }
-
-        // Validate role
-        if (!in_array($data['role'], ['admin', 'user'])) {
-            $errors['role'] = 'يجب أن يكون الدور إما "admin" أو "user".';
-        }
-
-        // Validate phone
-        if (empty($data['phone']) || !$this->isValidPhone($data['phone'])) {
-            $errors['phone'] = 'رقم الهاتف يجب أن يتكون من 9 أرقام ويجب أن يبدأ بأحد الأكواد: "71"، "77"، "78"، "73"، "70".';
-        }
-
-        return $errors;
-    }
-
-
-    private function validateUpdateUserData($data, $userId = null) {
-        $errors = [];
-
-        // Validate email
-        if (empty($data['email']) || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'البريد الإلكتروني غير صحيح.';
-        } else {
-            $userModel = new User();
-            if ($userModel->emailExists($data['email'], $userId)) {
-                $errors['email'] = 'البريد الإلكتروني موجود بالفعل.';
-            }
         }
 
         // Validate birth date

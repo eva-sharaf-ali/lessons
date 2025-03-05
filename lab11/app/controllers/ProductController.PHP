@@ -1,8 +1,8 @@
 <?php
 namespace App\Controllers;
 
-use App\Models\Product; // تغيير إلى Product
-use App\Models\Category; // إضافة استخدام نموذج Category
+use App\Models\Product;
+use App\Models\Category;
 use Core\Controller;
 
 class ProductController extends Controller {
@@ -10,172 +10,131 @@ class ProductController extends Controller {
     private $basePath;
 
     public function __construct() {
-        // Dynamically get the base path
         $this->basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
     }
 
-    // Read all products
     public function index() {
         $productModel = new Product();
-        $categoryModel = new Category(); // إضافة نموذج Category
+        $categoryModel = new Category();
         $products = $productModel->getAll();
-        $categories = $categoryModel->getAll(); // جلب جميع الأقسام
+        $categories = $categoryModel->getAll();
         
         $this->view('products/index', ['products' => $products, 'categories' => $categories]);
     }
 
-    // Create a product (Form)
     public function create() {
         $productModel = new Product();
-        $categoryModel = new Category(); // إنشاء نموذج Category
-        $categories = $categoryModel->getAll(); // جلب جميع الأقسام
-
+        $categoryModel = new Category();
+        $categories = $categoryModel->getAll();
+        $errors = [];
+    
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $data = [
-                'name' => $_POST['name'],
-                'description' => $_POST['description'],
-                'price' => $_POST['price'],
-                'category_id' => $_POST['category_id']
-            ];
-
-            // Validate data
-            $errors = $this->validateProductData($data);
+            $name = trim($_POST['name']);
+            $description = trim($_POST['description']);
+            $price = trim($_POST['price']);
+            $category_id = $_POST['category_id'];
+            
+            if (empty($name)) {
+                $errors['name'] = 'اسم المنتج مطلوب.';
+            } elseif ($productModel->getByName($name)) {
+                $errors['name'] = 'اسم المنتج موجود بالفعل.';
+            }
+    
+            $imagePath = !empty($_FILES['image']['name']) ? $this->uploadImage($_FILES['image'], $errors) : null;
+    
             if (empty($errors)) {
-                // التحقق من وجود ملف مرفوع
-                $imagePath = null;
-                if (!empty($_FILES['image']['name'])) {
-                    $targetDir = "uploads/"; // مجلد حفظ الصور
-                    $imageName = time() . "_" . basename($_FILES["image"]["name"]); // تغيير اسم الصورة لتجنب التكرار
-                    $targetFilePath = $targetDir . $imageName;
-
-                    // السماح بأنواع معينة من الملفات فقط
-                    $allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
-                    $fileType = strtolower(pathinfo($targetFilePath, PATHINFO_EXTENSION));
-
-                    if (in_array($fileType, $allowedTypes)) {
-                        if (move_uploaded_file($_FILES["image"]["tmp_name"], $targetFilePath)) {
-                            $imagePath = $targetFilePath;
-                        } else {
-                            die("Error uploading the file.");
-                        }
-                    } else {
-                        die("Invalid file type. Only JPG, JPEG, PNG, and GIF are allowed.");
-                    }
-                }
-
-                $data['image'] = $imagePath; // حفظ المسار الصحيح للصورة
-
-                // تحقق من وجود المنتج بنفس الاسم في نفس القسم
-                if ($productModel->productExistsInCategory($data['name'], $data['category_id'])) {
-                    $errors['name'] = 'المنتج موجود بالفعل في هذا القسم.';
-                }
-
-                if (empty($errors)) {
-                    if ($productModel->create($data)) {
-                        header('Location: ' . $this->basePath . '/products');
-                        exit;
-                    }
+                $data = [
+                    'name' => $name,
+                    'description' => $description,
+                    'price' => $price,
+                    'category_id' => $category_id,
+                    'image' => $imagePath
+                ];
+    
+                if ($productModel->create($data)) {
+                    header('Location: ' . $this->basePath . '/products');
+                    exit;
                 }
             }
-
-            // تمرير الأخطاء والبيانات إلى الصفحة
-            $this->view('products/create', ['categories' => $categories, 'errors' => $errors, 'data' => $data]);
         }
-
-        $this->view('products/create', ['categories' => $categories]);
+    
+        $this->view('products/create', ['categories' => $categories, 'errors' => $errors]);
     }
-
-    // Edit a product (Form)
+    
     public function edit($id) {
         $productModel = new Product();
         $categoryModel = new Category();
         $categories = $categoryModel->getAll();
         $product = $productModel->getById($id);
-
-        // حفظ المسار القديم للصورة إذا لم يتم رفع صورة جديدة
-        $imagePath = $product['image']; // حفظ المسار القديم للصورة
-
+        $errors = [];
+    
+        $imagePath = $product['image'];
+    
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $data = [
-                'name' => $_POST['name'],
-                'description' => $_POST['description'],
-                'price' => $_POST['price'],
-                'category_id' => $_POST['category_id']
-            ];
-
-            // Validate data
-            $errors = $this->validateProductData($data, $id);
-            if (empty($errors)) {
-                // التحقق من وجود صورة جديدة
-                if (!empty($_FILES['image']['name'])) {
-                    $targetDir = "uploads/"; 
-                    $imageName = time() . "_" . basename($_FILES["image"]["name"]);
-                    $targetFilePath = $targetDir . $imageName;
-
-                    $allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
-                    $fileType = strtolower(pathinfo($targetFilePath, PATHINFO_EXTENSION));
-
-                    if (in_array($fileType, $allowedTypes)) {
-                        if (move_uploaded_file($_FILES["image"]["tmp_name"], $targetFilePath)) {
-                            $imagePath = $targetFilePath; // حفظ المسار الجديد للصورة
-                        } else {
-                            die("Error uploading the file.");
-                        }
-                    } else {
-                        die("Invalid file type.");
-                    }
-                }
-
-                $data['image'] = $imagePath; // استخدام المسار الصحيح للصورة
-
-                // تحقق من وجود المنتج بنفس الاسم في نفس القسم
-                if ($productModel->productExistsInCategory($data['name'], $data['category_id'], $id)) {
-                    $errors['name'] = 'المنتج موجود بالفعل في هذا القسم.';
-                }
-
-                if (empty($errors)) {
-                    if ($productModel->update($data, $id)) {
-                        header('Location: ' . $this->basePath . '/products');
-                        exit;
-                    }
+            $name = trim($_POST['name']);
+            $description = trim($_POST['description']);
+            $price = trim($_POST['price']);
+            $category_id = $_POST['category_id'];
+            
+            if (empty($name)) {
+                $errors['name'] = 'اسم المنتج مطلوب.';
+            } elseif ($existingProduct = $productModel->getByName($name)) {
+                if ($existingProduct['id'] != $id) {
+                    $errors['name'] = 'اسم المنتج موجود بالفعل.';
                 }
             }
-
-            // تمرير الأخطاء والبيانات إلى الصفحة
-            $this->view('products/edit', ['product' => $product, 'categories' => $categories, 'errors' => $errors, 'data' => $data]);
+    
+            if (!empty($_FILES['image']['name'])) {
+                $newImagePath = $this->uploadImage($_FILES['image'], $errors);
+                if ($newImagePath) {
+                    $imagePath = $newImagePath;
+                }
+            }
+    
+            if (empty($errors)) {
+                $data = [
+                    'name' => $name,
+                    'description' => $description,
+                    'price' => $price,
+                    'category_id' => $category_id,
+                    'image' => $imagePath // يتم الاحتفاظ بالصورة القديمة إذا لم يتم رفع صورة جديدة
+                ];
+    
+                if ($productModel->update($data, $id)) {
+                    header('Location: ' . $this->basePath . '/products');
+                    exit;
+                }
+            }
         }
-
-        $this->view('products/edit', ['product' => $product, 'categories' => $categories]);
+    
+        $this->view('products/edit', ['product' => $product, 'categories' => $categories, 'errors' => $errors]);
     }
-
-    // Validate product data
-    private function validateProductData($data, $productId = null) {
-        $errors = [];
-
-        // Validate product name
-        if (empty($data['name'])) {
-            $errors['name'] = 'اسم المنتج مطلوب.';
-        }
-
-        // Validate product price
-        if (empty($data['price']) || !is_numeric($data['price']) || $data['price'] <= 0) {
-            $errors['price'] = 'السعر يجب أن يكون رقمًا موجبًا.';
-        }
-
-        // Validate category
-        if (empty($data['category_id'])) {
-            $errors['category_id'] = 'يجب تحديد القسم.';
-        }
-
-        return $errors;
-    }
-
-    // Delete a product
+    
     public function delete($id) {
         $productModel = new Product();
         if ($productModel->delete($id)) {
             header('Location: ' . $this->basePath . '/products');
             exit;
         }
+    }
+
+    private function uploadImage($file, &$errors) {
+        $targetDir = "uploads/";
+        $imageName = time() . "_" . basename($file["name"]);
+        $targetFilePath = $targetDir . $imageName;
+    
+        $allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
+        $fileType = strtolower(pathinfo($targetFilePath, PATHINFO_EXTENSION));
+    
+        if (in_array($fileType, $allowedTypes)) {
+            if (move_uploaded_file($file["tmp_name"], $targetFilePath)) {
+                return $targetFilePath;
+            } else {
+                $errors['image'] = "حدث خطأ أثناء رفع الصورة.";
+            }
+        } else {
+            $errors['image'] = "نوع الملف غير صالح. فقط JPG، JPEG، PNG، وGIF مسموح بها.";
+        }
+        return null;
     }
 }

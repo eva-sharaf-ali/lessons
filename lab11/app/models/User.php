@@ -57,16 +57,36 @@ class User {
 
     public function update($data, $id) {
         $data['id'] = $id; // إضافة ID المستخدم
-        $stmt = $this->conn->prepare("UPDATE {$this->table} SET first_name = :first_name, last_name = :last_name, email = :email, 
-                                       birth_date = :birth_date, role = :role, phone = :phone WHERE id = :id");
+    
+        // إذا كانت كلمة المرور غير فارغة، نقوم بتشفيرها
+        if (!empty($data['password'])) {
+            $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);
+            $passwordColumn = ", password = :password"; // إضافة كلمة المرور إلى الاستعلام إذا كانت موجودة
+        } else {
+            $passwordColumn = ""; // لا حاجة لإضافة كلمة المرور إذا كانت فارغة
+            unset($data['password']); // إزالة كلمة المرور من المصفوفة لتجنب استخدامها في الاستعلام
+        }
+    
+        // بناء الاستعلام مع إمكانية إضافة كلمة المرور فقط إذا كانت موجودة
+        $stmt = $this->conn->prepare("UPDATE {$this->table} SET 
+                                      first_name = :first_name, 
+                                      last_name = :last_name, 
+                                      email = :email, 
+                                      birth_date = :birth_date, 
+                                      role = :role, 
+                                      phone = :phone 
+                                      $passwordColumn 
+                                      WHERE id = :id");
     
         // تعيين الدور الافتراضي إذا لم يكن موجودًا
         if (!isset($data['role'])) {
             $data['role'] = 'user'; 
         }
     
+        // تنفيذ الاستعلام
         return $stmt->execute($data);
     }
+    
 
     public function delete($id) {
         $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE id = :id");

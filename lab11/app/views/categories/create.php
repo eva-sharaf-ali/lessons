@@ -2,18 +2,6 @@
 
 <div class="container mt-4">
     <h1>Create New Category</h1>
-
-      <!-- Display errors if any -->
-      <?php if (!empty($errors)): ?>
-        <div class="alert alert-danger">
-            <ul>
-                <?php foreach ($errors as $error): ?>
-                    <li><?= htmlspecialchars($error) ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    <?php endif; ?>
-    
     <form action="<?php echo PATH . "/categories/create"; ?>" method="POST">
         <div class="mb-3">
             <label for="name" class="form-label">Category Name</label>

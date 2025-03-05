@@ -2,18 +2,6 @@
 
 <div class="container mt-4">
     <h1>Create New Product</h1>
-    
-      <!-- Display errors if any -->
-      <?php if (!empty($errors)): ?>
-        <div class="alert alert-danger">
-            <ul>
-                <?php foreach ($errors as $error): ?>
-                    <li><?= htmlspecialchars($error) ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    <?php endif; ?>
-
     <form action="<?php echo PATH . "/products/create"; ?>" method="POST" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="name" class="form-label">Product Name</label>
@@ -35,6 +23,10 @@
                     <?php foreach ($categories as $category): ?>
                         <option value="<?= htmlspecialchars($category['id']); ?>">
                             <?= htmlspecialchars($category['name']); ?>
+                             <?php if (!empty($errorMessage)): ?>
+                <div class="alert alert-danger"><?= htmlspecialchars($errorMessage) ?></div>
+                      <?php endif; ?>
+
                         </option>
                     <?php endforeach; ?>
                 <?php else: ?>
@@ -52,14 +44,3 @@
 </div>
 
 <?php include 'app/views/layouts/footer.php'; ?>
-
-<!-- CSS internal -->
-<style>
-    body {
-        padding-bottom: 60px; /* مسافة سفلية لمنع تغطية الفوتر للأزرار */
-    }
-    .alert {
-        margin-top: 20px; /* مسافة أعلى للصندوق */
-    }
-</style>
-
